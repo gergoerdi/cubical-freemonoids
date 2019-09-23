@@ -2,7 +2,7 @@ all: FreeHIT.pdf
 
 %.pdf: %.md header.tex
 	pandoc \
-		--pdf-engine=xelatex \
-		-H header.tex -t beamer \
-		$< -o $@
+	  -H header.tex -t beamer \
+	  --pdf-engine=xelatex \
+	  -o $@ $<
 
