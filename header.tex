@@ -1,3 +1,6 @@
+%% \usefonttheme{serif}
+%% \usefonttheme{professionalfonts}%  don't change fonts inside beamer
+  
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{footline}[frame number]
 
@@ -8,10 +11,30 @@
 %% \setmonofont{TeX Gyre Schola}
 %% \setmonofont{Consolas}
 
+\setbeamerfont{section title}{parent=title}
+\setbeamercolor{section title}{parent=titlelike}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\AtBeginSection{
+  \begin{frame}
+    \vfill
+    \centering
+    \begin{beamercolorbox}[sep=8pt,center]{section title}
+      \usebeamerfont{section title}\insertsectionnumber.~\insertsection\par
+    \end{beamercolorbox}
+    \vfill
+  \end{frame}
+}
+  
 \usepackage{newunicodechar}
 \newunicodechar{ε}{\makebox[\fontcharwd\font`a]{$\epsilon$}}
 \newunicodechar{ˡ}{\makebox[\fontcharwd\font`a]{$^l$}}
 \newunicodechar{ʳ}{\makebox[\fontcharwd\font`a]{$^r$}}
 \newunicodechar{≡}{\makebox[\fontcharwd\font`a]{$\equiv$}}
 \newunicodechar{∀}{\makebox[\fontcharwd\font`a]{$\forall$}}
-
+\newunicodechar{φ}{\makebox[\fontcharwd\font`a]{$\phi$}}
+\newunicodechar{⋄}{\makebox[\fontcharwd\font`a]{$\diamond$}}
+\newunicodechar{⊕}{\makebox[\fontcharwd\font`a]{$\oplus$}}
+\newunicodechar{⊗}{\makebox[\fontcharwd\font`a]{$\otimes$}}
+\newunicodechar{∘}{\makebox[\fontcharwd\font`a]{$\circ$}}

@@ -5,7 +5,9 @@ date: Haskell.SG, December 2019.
 colortheme: crane
 ---
 
-# Syntax of monoids
+# Recap: free monoids in Haskell
+
+## Syntax of monoids
 
 ```haskell
 data MonoidSyntax a
@@ -14,7 +16,7 @@ data MonoidSyntax a
     | MonoidSyntax a :<> MonoidSyntax a
 ```
 
-# Is `MonoidSyntax` a monoid?
+## Is `MonoidSyntax` a monoid?
 
 ```haskell
 instance Monoid (MonoidSyntax a) where
@@ -33,7 +35,7 @@ xs <> (ys <> zs) = xs :<> (ys :<> zs)
 \pause
 There is too fine a structure!
 
-# Monoid homomorphisms
+## Monoid homomorphisms
 
 If we have
 
@@ -55,7 +57,7 @@ f (x <> y) = f x <> f y
 ```
 
 
-# Free monoids
+## Free monoids
 
 ```haskell
 data FreeMonoid a
@@ -71,7 +73,7 @@ s.t. `hom` is the **unique** monoid homomorphism that also has
 hom f (inj x) = f x
 ```
 
-# `[a]` is a free monoid
+## `[a]` is a free monoid
 
 ```haskell
 instance Monoid [a] where
@@ -92,7 +94,7 @@ hom f (x:xs) = f x <> hom f xs
 
 This is unique by induction on the length of the list.
 
-# The price of free
+## The price of free
 
 We had to **think** to come up with the representation `[a]` for the
 free monoid, it didn't **follow mechanically** from the definition of
@@ -109,9 +111,11 @@ What is a good representation for free...
 \pause
 \raisebox{-0.8\height}{\includegraphics[width=0.25\textwidth]{./ken.jpg}}"I don't want to be thinking, I want to be HoTT!"
 
-# A HoTT & free monoid
+# Free monoids in HoTT
 
-In a HoTT setting, we can write a free monoid **without thinking** by
+## A HoTT & free monoid
+
+**In a HoTT setting**, we can write a free monoid **without thinking** by
 taking the monoid syntax and enriching it with the monoid law-induced
 equalities as a **higher inductive type**:
 
@@ -126,4 +130,26 @@ data FreeMonoid (A : Type) : Type where
   assoc  : ∀ x y z  → (x · y) · z ≡ x · (y · z)
 
   squash : isSet (FreeMonoid A)
+```
+
+## Is this really free?
+
+What is free?
+
+```agda
+record Hom {A B} (M : Monoid A) (N : Monoid B) : Type where
+  open Monoid M renaming (_⋄_ to _⊕_)
+  open Monoid N renaming (_⋄_ to _⊗_; e to ε)
+  field
+    map : A → B
+    map-unit : map e ≡ ε
+    map-op : ∀ x y → map (x ⊕ y) ≡ map x ⊗ map y
+```
+
+```agda
+record IsFreeMonoid A {T} (FM : Monoid T) : Type where
+  field
+    inj : A → T
+    hom : {B} (M : Monoid B) (f : A → B) → Hom FM M
+    unique : {B} (M : Monoid B) (f : A → B) → ∀ (φ : Hom FM M) → Hom.map φ ∘ inj ≡ f → Hom.map φ ≡ Hom.map (hom M f)
 ```
