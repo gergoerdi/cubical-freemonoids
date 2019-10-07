@@ -13,7 +13,7 @@ colortheme: crane
 ```agda
 {-# OPTIONS --cubical --postfix-projections #-}
 
-open import Cubical.Core.Everything hiding (Type)
+open import Cubical.Core.Everything renaming (Type to Type′)
 open import Cubical.Foundations.Everything hiding (Type; assoc)
 
 Type : Set _
@@ -75,7 +75,7 @@ record Hom (M : Monoid A) (N : Monoid B) : Type₁ where
 ## Free monoids
 
 ```agda
-Unique : (A : Set ℓ) (P : A → Set ℓ′) → Set _
+Unique : (A : Type′ ℓ) (P : A → Type′ ℓ′) → Set _
 Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ]
   ∀ (y : A) → P y → y ≡ x
 ```
@@ -84,7 +84,7 @@ Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ]
 ```agda
 open import Cubical.Data.Sigma using (ΣPathP)
 
-Unique→IsContr : ∀ (A : Set ℓ) (P : A → Set ℓ′) → (∀ x → isProp (P x)) → Unique A P → isContr (Σ A P)
+Unique→IsContr : ∀ (A : Type′ ℓ) (P : A → Type′ ℓ′) → (∀ x → isProp (P x)) → Unique A P → isContr (Σ A P)
 Unique→IsContr A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sym (ΣPathP (unique y Py , r Py Px (unique y Py))) }
   where
     r : isOfHLevelDep 1 P
