@@ -21,7 +21,7 @@ Type = Type₀
 
 variable
   ℓ ℓ′ : Level
-  A B : Type
+  A B T : Type
 ```
 -->
 
@@ -36,7 +36,6 @@ record Monoid A : Type where
     unit-l : ∀ x     → e ⋄ x ≡ x
     unit-r : ∀ x     → x ⋄ e ≡ x
     assoc  : ∀ x y z → (x ⋄ y) ⋄ z ≡ x ⋄ (y ⋄ z)
-  infixr 20 _⋄_
 ```
 
 ## Syntax of monoids
@@ -68,17 +67,21 @@ record Hom (M : Monoid A) (N : Monoid B) : Type₁ where
   open Monoid M renaming (_⋄_ to _⋄₁_; e to e₁)
   open Monoid N renaming (_⋄_ to _⋄₂_; e to e₂)
   field
-    map : A → B
+    map      : A → B
     map-unit : map e₁ ≡ e₂
-    map-op : ∀ x y → map (x ⋄₁ y) ≡ map x ⋄₂ map y
+    map-op   : ∀ x y → map (x ⋄₁ y) ≡ map x ⋄₂ map y
 ```
 
 ## Free monoids
 
 ```agda
 Unique : (A : Set ℓ) (P : A → Set ℓ′) → Set _
-Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ] (∀ (y : A) → P y → y ≡ x)
+Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ]
+  ∀ (y : A) → P y → y ≡ x
+```
 
+<!--
+```agda
 open import Cubical.Data.Sigma using (ΣPathP)
 
 Unique→IsContr : ∀ (A : Set ℓ) (P : A → Set ℓ′) → (∀ x → isProp (P x)) → Unique A P → isContr (Σ A P)
@@ -86,26 +89,40 @@ Unique→IsContr A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sy
   where
     r : isOfHLevelDep 1 P
     r = isOfHLevel→isOfHLevelDep {n = 1} PIsProp
+```
+-->
 
-record IsFreeMonoidOver (A : Type) {T : Type} (M₀ : Monoid T) : Type₁ where
+```agda
+record IsFreeMonoidOver (A : Type) (M₀ : Monoid T) : Type₁ where
   open Hom
   field
     inj : A → T
-    free : (M : Monoid B) (f : A → B) → Unique (Hom M₀ M) (λ φ → φ .map ∘ inj ≡ f)
+    free : (M : Monoid B) (f : A → B) →
+      Unique (Hom M₀ M) (λ φ → φ .map ∘ inj ≡ f)
 
-IsFreeMonoid : {F : Type → Type} (FM : ∀ {A} → isSet A → Monoid (F A)) → Type₁
-IsFreeMonoid {F} FM = ∀ {A : Type} (AIsSet : isSet A) → IsFreeMonoidOver A (FM AIsSet)
+IsFreeMonoid :
+  {F : Type → Type} (FM : ∀ {A} → isSet A → Monoid (F A)) →
+  Type₁
+IsFreeMonoid {F} FM = ∀ {A} (AIsSet : isSet A) →
+  IsFreeMonoidOver A (FM AIsSet)
 ```
 
 ## `[a]` is a free monoid
 
-```
+`++` is associative simply because there is no place to hide for a
+tree structure in a chain of conses.
+
+<!--
+```agda
 open import Cubical.Data.List
 
 foldr : (A → B → B) → B → List A → B
 foldr f y [] = y
 foldr f y (x ∷ xs) = f x (foldr f y xs)
+```
+-->
 
+```agda
 listMonoid : isSet A → Monoid (List A)
 listMonoid {A = A} AIsSet = record
   { set = isOfHLevelList 0 AIsSet
@@ -117,6 +134,10 @@ listMonoid {A = A} AIsSet = record
   }
 
 listIsFree : IsFreeMonoid listMonoid
+```
+
+<!--
+```agda
 listIsFree {A = A} AIsSet = record
   { inj = [_]
   ; free = free
@@ -150,25 +171,7 @@ listIsFree {A = A} AIsSet = record
       pointwise [] = map-unit′
       pointwise (x ∷ xs) = map-op′ [ x ] xs ∙ cong₂ _⋄_ (λ i → p i x) (pointwise xs)
 ```
-
-```haskell
-instance Monoid [a] where
-    mempty = []
-    mappend = (++)
-inj x = [x]
-```
-
-`++` is associative simply because there is no place to hide for a
-tree structure in a chain of conses.
-
-\pause
-
-```haskell
-hom f [] = mempty
-hom f (x:xs) = f x <> hom f xs
-```
-
-This is unique by induction on the length of the list.
+-->
 
 ## The price of free
 
@@ -209,9 +212,10 @@ data FreeMonoid A : Type where
   assoc  : ∀ x y z  → (x :⋄: y) :⋄: z ≡ x :⋄: (y :⋄: z)
 
   squash : isSet (FreeMonoid A)
+```
 
-infixr 20 _:⋄:_
-
+<!--
+```agda
 elimIntoProp : (P : FreeMonoid A → Type) → (∀ x → isProp (P x))
              → (∀ x → P ⟨ x ⟩) → P ε → (∀ x y → P x → P y → P (x :⋄: y)) → ∀ x → P x
 elimIntoProp P PIsProp P⟨_⟩ Pε P⋄ = go
@@ -250,7 +254,12 @@ elimIntoProp P PIsProp P⟨_⟩ Pε P⋄ = go
 
       r : isOfHLevelDep 2 P
       r = isOfHLevel→isOfHLevelDep {n = 2} (λ a → hLevelSuc 1 (P a) (PIsProp a))
+```
+-->
 
+## `FreeMonoid` is trivially a monoid
+
+```agda
 freeMonoid : ∀ A → Monoid (FreeMonoid A)
 freeMonoid A = record
   { set = squash
@@ -262,6 +271,10 @@ freeMonoid A = record
   }
 
 freeMonoidIsFree : IsFreeMonoid (λ {A} _ → freeMonoid A)
+```
+
+<!--
+```agda
 freeMonoidIsFree {A = A} AIsSet = record
   { inj = ⟨_⟩
   ; free = free
@@ -318,21 +331,21 @@ module ListVsFreeMonoid (AIsSet : isSet A) where
   toList : FreeMonoid A → List A
   toList ⟨ x ⟩ = x ∷ []
   toList ε = []
-  toList (m₁ :⋄: m₂) = toList m₁ ++ toList m₂
-  toList (unit-l m i) = toList m
-  toList (unit-r m i) = ++-unit-r (toList m) i
-  toList (assoc m₁ m₂ m₃ i) = ++-assoc (toList m₁) (toList m₂) (toList m₃) i
-  toList (squash m₁ m₂ p q i j) = listIsSet (toList m₁) (toList m₂) (cong toList p) (cong toList q) i j
+  toList (x :⋄: y) = toList x ++ toList y
+  toList (unit-l x i) = toList x
+  toList (unit-r x i) = ++-unit-r (toList x) i
+  toList (assoc x y z i) = ++-assoc (toList x) (toList y) (toList z) i
+  toList (squash x y p q i j) = listIsSet (toList x) (toList y) (cong toList p) (cong toList q) i j
 
   toList-fromList : ∀ xs → toList (fromList xs) ≡ xs
   toList-fromList [] = refl
   toList-fromList (x ∷ xs) = cong (x ∷_) (toList-fromList xs)
 
-  fromList-toList : ∀ m → fromList (toList m) ≡ m
+  fromList-toList : ∀ x → fromList (toList x) ≡ x
   fromList-toList = elimIntoProp (λ m → fromList (toList m) ≡ m) (λ x → squash (fromList (toList x)) x)
       (unit-r ∘ _)
       refl
-      (λ m₁ m₂ p q → sym (fromList-homo (toList m₁) (toList m₂)) ∙ cong₂ _:⋄:_ p q)
+      (λ x y p q → sym (fromList-homo (toList x) (toList y)) ∙ cong₂ _:⋄:_ p q)
     where
       fromList-homo : ∀ xs ys → fromList xs :⋄: fromList ys ≡ fromList (xs ++ ys)
       fromList-homo [] ys = unit-l (fromList ys)
@@ -341,6 +354,7 @@ module ListVsFreeMonoid (AIsSet : isSet A) where
   FreeMonoid≃List : FreeMonoid A ≃ List A
   FreeMonoid≃List = isoToEquiv (iso toList fromList toList-fromList fromList-toList)
 ```
+-->
 
 ## Is this really free?
 
