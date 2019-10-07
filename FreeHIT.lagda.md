@@ -76,16 +76,16 @@ record Hom (M : Monoid A) (N : Monoid B) : Type₁ where
 ## Free monoids
 
 ```agda
-Uniquely : {A : Set ℓ} (x : A) (P : A → Set ℓ′) → Set _
-Uniquely {A = A} x P = Σ (P x) λ _ → ∀ (y : A) → P y → y ≡ x
+Uniquely : {A : Set ℓ} (P : A → Set ℓ′) (x : A) → Set _
+Uniquely {A = A} P x = Σ (P x) λ _ → ∀ (y : A) → P y → y ≡ x
 
 Unique : (A : Set ℓ) (P : A → Set ℓ′) → Set _
-Unique A P = Σ[ x ∈ A ] (Σ (P x) (λ _ → ∀ (y : A) → P y → y ≡ x))
+Unique A P = Σ _ (Uniquely P)
 
 open import Cubical.Data.Sigma using (ΣPathP)
 
-foobar : ∀ (A : Set ℓ) (P : A → Set ℓ′) → (∀ x → isProp (P x)) → Unique A P → isContr (Σ A P)
-foobar A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sym (ΣPathP (unique y Py , r Py Px (unique y Py))) }
+Unique→IsContr : ∀ (A : Set ℓ) (P : A → Set ℓ′) → (∀ x → isProp (P x)) → Unique A P → isContr (Σ A P)
+Unique→IsContr A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sym (ΣPathP (unique y Py , r Py Px (unique y Py))) }
   where
     r : isOfHLevelDep 1 P
     r = isOfHLevel→isOfHLevelDep {n = 1} PIsProp
@@ -94,9 +94,7 @@ record IsFreeMonoidOver (A : Type) {T : Type} (M₀ : Monoid T) : Type₁ where
   open Hom
   field
     inj : A → T
-    hom : (M : Monoid B) (f : A → B) → Hom M₀ M
-    free : (M : Monoid B) (f : A → B) → Uniquely (hom M f) λ φ → φ .map ∘ inj ≡ f
-    foo : (M : Monoid B) (f : A → B) → isContr (Σ[ φ ∈ Hom M₀ M ] (φ .map ∘ inj ≡ f))
+    free : (M : Monoid B) (f : A → B) → Unique (Hom M₀ M) (λ φ → φ .map ∘ inj ≡ f)
 
 IsFreeMonoid : {F : Type → Type} (FM : ∀ {A} → isSet A → Monoid (F A)) → Type₁
 IsFreeMonoid {F} FM = ∀ {A : Type} (AIsSet : isSet A) → IsFreeMonoidOver A (FM AIsSet)
@@ -124,52 +122,36 @@ listMonoid {A = A} AIsSet = record
 listIsFree : IsFreeMonoid listMonoid
 listIsFree {A = A} AIsSet = record
   { inj = [_]
-  ; hom = hom
-  ; free = λ M f → hom-inj M f  , unique M f
-  ; foo = λ M f → (hom M f , hom-inj M f) , λ { (φ , lifting) i → unique M f φ lifting (~ i) , {!!} }
+  ; free = free
   }
   where
-    hom : ∀ {B} (M : Monoid B) (f : A → B) → Hom (listMonoid AIsSet) M
-    hom {B = B} M f = record { map = foldr (λ x → f x ⋄_) e ; map-unit = refl ; map-op = map-op }
-      where
-      open Monoid M
+  free : ∀ {B} (M : Monoid B) (f : A → B) → Unique (Hom (listMonoid AIsSet) M) λ φ → Hom.map φ ∘ [_] ≡ f
+  free {B = B} M f = hom , funExt (λ x → unit-r (f x)) , unique
+    where
+    open Monoid M
 
+    hom : Hom (listMonoid AIsSet) M
+    hom = record { map = foldr (λ x → f x ⋄_) e ; map-unit = refl ; map-op = map-op }
+      where
       map-op : (xs ys : List A) →
         foldr (λ x → f x ⋄_) e (xs ++ ys) ≡ (foldr (λ x → f x ⋄_) e xs) ⋄ (foldr (λ x → f x ⋄_) e ys)
       map-op [] ys = sym (unit-l _)
       map-op (x ∷ xs) ys = cong (f x ⋄_) (map-op xs ys) ∙ sym (assoc (f x) _ _)
 
-    hom-inj : ∀ {B} (M : Monoid B) (f : A → B) → Hom.map (hom M f) ∘ [_] ≡ f
-    hom-inj M f = funExt λ x → Monoid.unit-r M (f x)
+    open Hom hom
 
-    unique : (M : Monoid B) (f : A → B) (φ : Hom (listMonoid AIsSet) M) →
-      Hom.map φ ∘ [_] ≡ f → φ ≡ hom M f
-    unique M f φ lifting = λ i → record
+    unique : (φ : Hom (listMonoid AIsSet) M) → Hom.map φ ∘ [_] ≡ f → φ ≡ hom
+    unique φ p = λ i → record
       { map = λ xs → pointwise xs i
-      ; map-unit = isSet→isSet' set map-unit (Hom.map-unit (hom M f)) map-unit (λ _ → e) i
-      ; map-op = λ xs ys → isSet→isSet' set (map-op xs ys) (Hom.map-op (hom M f) xs ys) (λ i → pointwise (xs ++ ys) i) (λ i → pointwise xs i ⋄ pointwise ys i) i
+      ; map-unit = isSet→isSet' set map-unit′ map-unit map-unit′ (λ _ → e) i
+      ; map-op = λ xs ys → isSet→isSet' set (map-op′ xs ys) (map-op xs ys) (λ i → pointwise (xs ++ ys) i) (λ i → pointwise xs i ⋄ pointwise ys i) i
       }
       where
-      open Monoid M
-      open Hom φ
+      open Hom φ renaming (map to map′; map-unit to map-unit′; map-op to map-op′)
 
-      pointwise : ∀ xs → Hom.map φ xs ≡ Hom.map (hom M f) xs
-      pointwise [] = map-unit
-      pointwise (x ∷ xs) = map-op [ x ] xs ∙ cong₂ _⋄_ (λ i → lifting i x) (pointwise xs)
-
-    foo : (M : Monoid B) (f : A → B) (φ : Hom (listMonoid AIsSet) M) →
-      Hom.map φ ∘ [_] ≡ f → Set
-    foo M f φ lifting = {!!}
-      where
-      open Monoid M
-      open Hom φ
-
-      bar : ∀ i → (λ x → (map-op [ x ] [] ∙ cong₂ _⋄_ (λ i → lifting i x) map-unit) (~ i)) ≡ f
-      bar i = funExt λ x →
-        (map-op [ x ] [] ∙ cong₂ _⋄_ (λ i → lifting i x) map-unit) (~ i) ≡⟨ {!!} ⟩
-        {!!} ≡⟨ {!!} ⟩
-        f x ∎
-
+      pointwise : ∀ xs → map′ xs ≡ map xs
+      pointwise [] = map-unit′
+      pointwise (x ∷ xs) = map-op′ [ x ] xs ∙ cong₂ _⋄_ (λ i → p i x) (pointwise xs)
 ```
 
 ```haskell
@@ -285,19 +267,22 @@ freeMonoid A = record
 freeMonoidIsFree : IsFreeMonoid (λ {A} _ → freeMonoid A)
 freeMonoidIsFree {A = A} AIsSet = record
   { inj = ⟨_⟩
-  ; hom = hom
-  ; free = λ M f → (hom-inj M f) , unique M f
+  ; free = free
+  -- ; free = λ M f → (hom-inj M f) , unique M f
   }
   where
-    hom : ∀ {B : Type} (M : Monoid B) (f : A → B) → Hom (freeMonoid A) M
-    hom {B = B} M f = record
+  free : ∀ {B} (M : Monoid B) (f : A → B) → Unique (Hom (freeMonoid A) M) λ φ → Hom.map φ ∘ ⟨_⟩ ≡ f
+  free {B = B} M f = hom , funExt (λ x → refl) , unique
+    where
+    open Monoid M renaming (unit-l to unit-l′; unit-r to unit-r′; assoc to assoc′)
+
+    hom : Hom (freeMonoid A) M
+    hom = record
       { map = map
       ; map-unit = refl
       ; map-op = λ x y → refl
       }
       where
-        open Monoid M renaming (unit-l to unit-l′; unit-r to unit-r′; assoc to assoc′)
-
         map : FreeMonoid A → B
         map ⟨ x ⟩ = f x
         map ε = e
@@ -307,24 +292,22 @@ freeMonoidIsFree {A = A} AIsSet = record
         map (assoc x y z i) = assoc′ (map x) (map y) (map z) i
         map (squash x y p q i j) = set (map x) (map y) (cong map p) (cong map q) i j
 
-    hom-inj : ∀ (M : Monoid B) (f : A → B) → Hom.map (hom M f) ∘ ⟨_⟩ ≡ f
-    hom-inj M f = funExt λ x → refl
+    open Hom hom
 
-    unique : ∀ (M : Monoid B) (f : A → B) (φ : Hom (freeMonoid A) M) →
-      Hom.map φ ∘ ⟨_⟩ ≡ f → φ ≡ hom M f
-    unique M f φ p = λ i → record
+    unique : (φ : Hom (freeMonoid A) M) →
+      Hom.map φ ∘ ⟨_⟩ ≡ f → φ ≡ hom
+    unique φ p = λ i → record
       { map = λ x → pointwise x i
-      ; map-unit = isSet→isSet' set map-unit refl map-unit (λ _ → e) i
-      ; map-op = λ x y → isSet→isSet' set (map-op x y) refl (λ i → pointwise (x :⋄: y) i) (λ i → pointwise x i ⋄ pointwise y i) i
+      ; map-unit = isSet→isSet' set map-unit′ refl map-unit′ (λ _ → e) i
+      ; map-op = λ x y → isSet→isSet' set (map-op′ x y) refl (λ i → pointwise (x :⋄: y) i) (λ i → pointwise x i ⋄ pointwise y i) i
       }
       where
-        open Monoid M
-        open Hom φ
+      open Hom φ renaming (map to map′; map-unit to map-unit′; map-op to map-op′)
 
-        pointwise : ∀ x → Hom.map φ x ≡ Hom.map (hom M f) x
-        pointwise = elimIntoProp _ (λ x → set _ _) (λ x i → p i x)
-          map-unit
-          (λ x y p q → map-op x y ∙ cong₂ _⋄_ p q)
+      pointwise : ∀ x → map′ x ≡ map x
+      pointwise = elimIntoProp _ (λ x → set _ _) (λ x i → p i x)
+        map-unit′
+        (λ x y p q → map-op′ x y ∙ cong₂ _⋄_ p q)
 
 
 module ListVsFreeMonoid (AIsSet : isSet A) where
