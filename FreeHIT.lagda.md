@@ -76,11 +76,8 @@ record Hom (M : Monoid A) (N : Monoid B) : Type₁ where
 ## Free monoids
 
 ```agda
-Uniquely : {A : Set ℓ} (P : A → Set ℓ′) (x : A) → Set _
-Uniquely {A = A} P x = Σ (P x) λ _ → ∀ (y : A) → P y → y ≡ x
-
 Unique : (A : Set ℓ) (P : A → Set ℓ′) → Set _
-Unique A P = Σ _ (Uniquely P)
+Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ] (∀ (y : A) → P y → y ≡ x)
 
 open import Cubical.Data.Sigma using (ΣPathP)
 
