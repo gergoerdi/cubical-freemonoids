@@ -1,6 +1,6 @@
 all: FreeHIT.pdf
 
-%.pdf: %.md header.tex
+%.pdf: %.lagda.md header.tex
 	pandoc \
 	  -H header.tex -t beamer \
 	  --pdf-engine=xelatex \
