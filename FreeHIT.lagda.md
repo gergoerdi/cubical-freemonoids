@@ -1,6 +1,8 @@
 ---
 title: Free monoids take a price HIT
-author: Gergő Érdi \url{http://gergo.erdi.hu/}
+author: |
+   | Gergő Érdi
+   | \url{http://unsafePerform.IO/}
 date: Haskell.SG, December 2019.
 colortheme: crane
 ---
@@ -93,7 +95,7 @@ Unique→IsContr A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sy
 -->
 
 ```agda
-record IsFreeMonoidOver (A : Type) (M₀ : Monoid T) : Type₁ where
+record IsFreeMonoidOver (A : Type) {T : Type} (M₀ : Monoid T) : Type₁ where
   open Hom
   field
     inj : A → T
@@ -109,7 +111,7 @@ IsFreeMonoid {F} FM = ∀ {A} (AIsSet : isSet A) →
 
 ## `[a]` is a free monoid
 
-`++` is associative simply because there is no place to hide for a
+`_++_` is associative simply because there is no place to hide for a
 tree structure in a chain of conses.
 
 <!--
@@ -269,7 +271,13 @@ freeMonoid A = record
   ; unit-r = unit-r
   ; assoc = assoc
   }
+```
 
+\pause
+
+... and it's also free:
+
+```agda
 freeMonoidIsFree : IsFreeMonoid (λ {A} _ → freeMonoid A)
 ```
 
@@ -318,8 +326,16 @@ freeMonoidIsFree {A = A} AIsSet = record
       pointwise = elimIntoProp _ (λ x → set _ _) (λ x i → p i x)
         map-unit′
         (λ x y p q → map-op′ x y ∙ cong₂ _⋄_ p q)
+```
+-->
 
+## `List` vs `FreeMonoid`
 
+The two are isomorphic.
+
+From `List` to `FreeMonoid` we can just go right-associated:
+
+```agda
 module ListVsFreeMonoid (AIsSet : isSet A) where
   listIsSet : isSet (List A)
   listIsSet = isOfHLevelList 0 AIsSet
@@ -327,7 +343,14 @@ module ListVsFreeMonoid (AIsSet : isSet A) where
   fromList : List A → FreeMonoid A
   fromList [] = ε
   fromList (x ∷ xs) = ⟨ x ⟩ :⋄: fromList xs
+```
 
+## `List` vs `FreeMonoid` (cont.)
+
+For the other direction, we map fiat equalities to list equality
+proofs:
+
+```agda
   toList : FreeMonoid A → List A
   toList ⟨ x ⟩ = x ∷ []
   toList ε = []
@@ -336,12 +359,23 @@ module ListVsFreeMonoid (AIsSet : isSet A) where
   toList (unit-r x i) = ++-unit-r (toList x) i
   toList (assoc x y z i) = ++-assoc (toList x) (toList y) (toList z) i
   toList (squash x y p q i j) = listIsSet (toList x) (toList y) (cong toList p) (cong toList q) i j
+```
 
+## `List` vs `FreeMonoid` (cont.)
+
+These two functions form an isomorphism, which we can lift using
+univalence into a type equality:
+
+```
   toList-fromList : ∀ xs → toList (fromList xs) ≡ xs
+  fromList-toList : ∀ x → fromList (toList x) ≡ x
+```
+
+<!--
+```
   toList-fromList [] = refl
   toList-fromList (x ∷ xs) = cong (x ∷_) (toList-fromList xs)
 
-  fromList-toList : ∀ x → fromList (toList x) ≡ x
   fromList-toList = elimIntoProp (λ m → fromList (toList m) ≡ m) (λ x → squash (fromList (toList x)) x)
       (unit-r ∘ _)
       refl
@@ -350,18 +384,14 @@ module ListVsFreeMonoid (AIsSet : isSet A) where
       fromList-homo : ∀ xs ys → fromList xs :⋄: fromList ys ≡ fromList (xs ++ ys)
       fromList-homo [] ys = unit-l (fromList ys)
       fromList-homo (x ∷ xs) ys = assoc ⟨ x ⟩ (fromList xs) (fromList ys) ∙ cong (⟨ x ⟩ :⋄:_) (fromList-homo xs ys)
-
-  FreeMonoid≃List : FreeMonoid A ≃ List A
-  FreeMonoid≃List = isoToEquiv (iso toList fromList toList-fromList fromList-toList)
 ```
 -->
 
-## Is this really free?
-
-What is free?
-
 ```agda
-```
+  FreeMonoid≃List : FreeMonoid A ≃ List A
+  FreeMonoid≃List = isoToEquiv
+    (iso toList fromList toList-fromList fromList-toList)
 
-```agda
+  FreeMonoid≡List : FreeMonoid A ≡ List A
+  FreeMonoid≡List = ua FreeMonoid≃List
 ```

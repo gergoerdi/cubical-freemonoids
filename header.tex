@@ -1,4 +1,4 @@
-\PassOptionsToPackage{colorlinks=true,linkcolor=black,urlcolor=blue}{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
 
 %% \LoadClass[xetex, mathserif, usenames, dvipsnames,
 %%   hyperref={colorlinks=true,linkcolor=black,urlcolor=blue},
@@ -34,7 +34,7 @@
 }
   
 \usepackage{newunicodechar}
-%% \newunicodechar{′}{\makebox[\fontcharwd\font`a]{$\prime$}}
+\AtBeginDocument{\newunicodechar{′}{\makebox[\fontcharwd\font`a]{$\prime$}}}
 \newunicodechar{∙}{\makebox[\fontcharwd\font`a]{$\bullet$}}
 \newunicodechar{≃}{\makebox[\fontcharwd\font`a]{$\simeq$}}
 \newunicodechar{∈}{\makebox[\fontcharwd\font`a]{$\in$}}
@@ -55,6 +55,6 @@
 \newunicodechar{∘}{\makebox[\fontcharwd\font`a]{$\circ$}}
 \newunicodechar{ℓ}{\makebox[\fontcharwd\font`a]{$\ell$}}
 \newunicodechar{λ}{\makebox[\fontcharwd\font`a]{$\lambda$}}
-\newunicodechar{∷}{\makebox[\fontcharwd\font`a]{$\ratio$}}
+\newunicodechar{∷}{\makebox[\fontcharwd\font`a]{$::$}}
 \newunicodechar{⟨}{\makebox[\fontcharwd\font`a]{$\langle$}}
 \newunicodechar{⟩}{\makebox[\fontcharwd\font`a]{$\rangle$}}
