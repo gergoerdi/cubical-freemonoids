@@ -24,6 +24,12 @@ Type = Type₀
 variable
   ℓ ℓ′ : Level
   A B T : Type
+
+ap : ∀ {ℓ ℓ'} {A : Type′ ℓ} {B : A → Type′ ℓ'} {f g : (x : A) → B x} (p : f ≡ g) → (x : A) → f x ≡ g x
+ap p x = cong (λ f → f x) p
+
+id : ∀ {ℓ} {A : Type′ ℓ} → A → A
+id x = x
 ```
 -->
 
@@ -111,6 +117,23 @@ IsFreeMonoid {F} FM = ∀ {A} (AIsSet : isSet A) →
   IsFreeMonoidOver A (FM AIsSet)
 ```
 
+<!--
+```agda
+module _ {{M : Monoid A}} {{N : Monoid B}} (φ ψ : Hom M N) where
+  open Hom
+
+  Hom≡ : φ .map ≡ ψ .map → φ ≡ ψ
+  Hom≡ p i = record
+    { map = p i
+    ; map-unit = isSet→isSet' set map-unit₁ map-unit₂ (ap p e) (λ _ → e) i
+    ; map-op = λ x y → isSet→isSet' set (map-op₁ x y) (map-op₂ x y) (ap p (x ⋄ y)) (cong₂ _⋄_ (ap p x) (ap p y)) i
+    }
+    where
+    open Hom φ renaming (map to map₁; map-unit to map-unit₁; map-op to map-op₁)
+    open Hom ψ renaming (map to map₂; map-unit to map-unit₂; map-op to map-op₂)
+```
+-->
+
 ## `[a]` is a free monoid
 
 `_++_` is associative simply because there is no place to hide for a
@@ -147,9 +170,11 @@ listIsFree {A = A} AIsSet = record
   ; free = free
   }
   where
-  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (Hom (listMonoid AIsSet) M) λ φ → Hom.map φ ∘ [_] ≡ f
-  free {B = B} {{M}} f = hom , funExt (λ x → unit-r (f x)) , unique
+  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (Hom (listMonoid AIsSet) M) _
+  free {B = B} {{M}} f = hom , funExt (λ x → unit-r (f x)) , λ φ p → Hom≡ φ hom (funExt (pointwise φ p))
     where
+    instance _ = listMonoid AIsSet
+
     hom : Hom (listMonoid AIsSet) M
     hom = record { map = foldr (λ x → f x ⋄_) e ; map-unit = refl ; map-op = map-op }
       where
@@ -158,15 +183,8 @@ listIsFree {A = A} AIsSet = record
       map-op [] ys = sym (unit-l _)
       map-op (x ∷ xs) ys = cong (f x ⋄_) (map-op xs ys) ∙ sym (assoc (f x) _ _)
 
-    open Hom hom
-
-    unique : (φ : Hom (listMonoid AIsSet) M) → Hom.map φ ∘ [_] ≡ f → φ ≡ hom
-    unique φ p = λ i → record
-      { map = λ xs → pointwise xs i
-      ; map-unit = isSet→isSet' set map-unit′ map-unit map-unit′ (λ _ → e) i
-      ; map-op = λ xs ys → isSet→isSet' set (map-op′ xs ys) (map-op xs ys) (λ i → pointwise (xs ++ ys) i) (λ i → pointwise xs i ⋄ pointwise ys i) i
-      }
-      where
+    module _ φ (p : Hom.map φ ∘ [_] ≡ f)  where
+      open Hom hom
       open Hom φ renaming (map to map′; map-unit to map-unit′; map-op to map-op′)
 
       pointwise : ∀ xs → map′ xs ≡ map xs
@@ -288,9 +306,11 @@ freeMonoidIsFree {A = A} AIsSet = record
   ; free = free
   }
   where
-  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (Hom (freeMonoid A) M) λ φ → Hom.map φ ∘ ⟨_⟩ ≡ f
-  free {B = B} {{M}} f = hom , funExt (λ x → refl) , unique
+  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (Hom (freeMonoid A) M) _
+  free {B = B} {{M}} f = hom , funExt (λ x → refl) , λ φ p → Hom≡ φ hom (funExt (pointwise φ p))
     where
+    instance _ = freeMonoid A
+
     hom : Hom (freeMonoid A) M
     hom = record
       { map = map
@@ -307,21 +327,14 @@ freeMonoidIsFree {A = A} AIsSet = record
         map (:assoc: x y z i) = assoc (map x) (map y) (map z) i
         map (squash x y p q i j) = set (map x) (map y) (cong map p) (cong map q) i j
 
-    open Hom hom
-
-    unique : (φ : Hom (freeMonoid A) M) → Hom.map φ ∘ ⟨_⟩ ≡ f → φ ≡ hom
-    unique φ p = λ i → record
-      { map = λ x → pointwise x i
-      ; map-unit = isSet→isSet' set map-unit′ refl map-unit′ (λ _ → e) i
-      ; map-op = λ x y → isSet→isSet' set (map-op′ x y) refl (λ i → pointwise (x :⋄: y) i) (λ i → pointwise x i ⋄ pointwise y i) i
-      }
-      where
+    module _ φ (p : Hom.map φ ∘ ⟨_⟩ ≡ f)  where
+      open Hom hom
       open Hom φ renaming (map to map′; map-unit to map-unit′; map-op to map-op′)
 
       pointwise : ∀ x → map′ x ≡ map x
-      pointwise = elimIntoProp _ (λ x → set _ _) (λ x i → p i x)
+      pointwise = elimIntoProp _ (λ x → set _ _) (ap p)
         map-unit′
-        (λ x y p q → map-op′ x y ∙ cong₂ _⋄_ p q)
+        λ x y p q → map-op′ x y ∙ cong₂ _⋄_ p q
 ```
 -->
 
@@ -418,79 +431,176 @@ module FreeVsFree (AIsSet : isSet A) where
   open IsFreeMonoidOver
   open Hom
 
+foo : ∀ {ℓ} (P : List A → Type′ ℓ)
+  (Pinj : ∀ x → P [ x ])
+  (Pe : P [])
+  (P⋄ : ∀ x y → P x → P y → P (x ++ y)) →
+  ∀ x → P x
+foo P Pinj Pe P⋄ [] = Pe
+foo P Pinj Pe P⋄ (x ∷ xs) = P⋄ [ x ] xs (Pinj x) (foo P Pinj Pe P⋄ xs)
+
 module ListVsFreeMonoid2 {M N} {{MM : Monoid M}} {{NN : Monoid N}}
   (AIsSet : isSet A)
   (FM : IsFreeMonoidOver A MM)
   (FN : IsFreeMonoidOver A NN)
   where
-  open IsFreeMonoidOver
   open Hom
 
-  freeᴹ = FM .free (FN .inj)
-  freeᴺ = FN .free (FM .inj)
+  module _ where
+    open IsFreeMonoidOver FM
 
-  from : M → N
-  from = freeᴹ .fst .map
+    -- freemonoid-elim : ∀ {ℓ} (P : M → Type′ ℓ)
+    --   (Pinj : ∀ x → P (inj x))
+    --   (Pe : P e)
+    --   (P⋄ : ∀ x y → P x → P y → P (x ⋄ y)) →
+    --   ∀ x → P x
+    -- freemonoid-elim P Pinj Pe P⋄ x = {!!}
 
-  to : N → M
-  to = freeᴺ .fst .map
+  open IsFreeMonoidOver
+  module _ where
+    Free = FreeMonoid A
+    instance FFM = freeMonoid A
+    FFF = freeMonoidIsFree AIsSet
 
-  -- module _ where
-  --   Free = FreeMonoid A
-  --   instance FFM = freeMonoid A
-  --   FFF = freeMonoidIsFree AIsSet
+    freeᶠ = FFF .free (FM .inj)
+    freeᴹ = FM .free (FFF .inj)
 
-  --   freeᶠ = FFF .free (FM .inj)
-  --   freeᴹ = FM .free (FFF .inj)
+    M→F : Hom MM FFM
+    M→F = freeᴹ .fst
 
-  --   fromM : M → FreeMonoid A
-  --   fromM = FM .free (FFF .inj) .fst .map
+    F→M : Hom FFM MM
+    F→M = freeᶠ .fst
 
-  --   toM : FreeMonoid A → M
-  --   toM = FFF .free (FM .inj) .fst .map
+    from : M → FreeMonoid A
+    from = M→F .map
 
-  --   from-to : ∀ x → fromM (toM x) ≡ x
-  --   from-to = elimIntoProp _ (λ _ → squash _ _)
-  --     {!!} -- (unit-r ∘ FFF .inj)
-  --     (cong fromM (freeᶠ .fst .map-unit) ∙ freeᴹ .fst .map-unit)
-  --     (λ x y p q →
-  --       fromM (toM (x ⋄ y)) ≡⟨ cong fromM (freeᶠ .fst .map-op x y) ⟩
-  --       fromM (toM x ⋄ toM y) ≡⟨ freeᴹ .fst .map-op (toM x) (toM y) ⟩
-  --       fromM (toM x) ⋄ fromM (toM y) ≡⟨ cong₂ _⋄_ p q ⟩
-  --       x ⋄ y ∎)
+    to : FreeMonoid A → M
+    to = F→M .map
+
+    M→M : Hom MM MM
+    M→M = record
+      { map = id
+      ; map-unit = refl
+      ; map-op = λ x y → refl
+      }
+
+    M→M-prop : M→M .map ∘ FM .inj ≡ FM .inj
+    M→M-prop = funExt (λ x → refl)
+
+    M→M′ : Hom MM MM
+    M→M′ = record
+      { map = to ∘ from
+      ; map-unit = cong to (M→F .map-unit) ∙ F→M .map-unit
+      ; map-op = λ x y → cong to (M→F .map-op x y) ∙ F→M .map-op (from x) (from y)
+      }
+
+    M→M′-prop : M→M′ .map ∘ FM .inj ≡ FM .inj
+    M→M′-prop =
+      to ∘ from ∘ FM .inj ≡⟨ funExt (λ x → cong to (ap (freeᴹ .snd .fst) x)) ⟩
+      to ∘ FFF .inj ≡⟨ freeᶠ .snd .fst ⟩
+      FM .inj ∎
+
+    eq : M→M′ ≡ M→M
+    eq = FM .free {M} (FM .inj) .snd .snd M→M′ M→M′-prop ∙ sym (FM .free {M} (FM .inj) .snd .snd M→M M→M-prop)
+
+    from-to : ∀ x → from (to x) ≡ x
+    from-to = elimIntoProp _ (λ _ → squash _ _)
+      (ap (freeᴹ .snd .fst))
+      (cong from (F→M .map-unit) ∙ M→F .map-unit)
+      (λ x y p q →
+        from (to (x ⋄ y)) ≡⟨ cong from (F→M .map-op x y) ⟩
+        from (to x ⋄ to y) ≡⟨ M→F .map-op (to x) (to y) ⟩
+        from (to x) ⋄ from (to y) ≡⟨ cong₂ _⋄_ p q ⟩
+        x ⋄ y ∎)
+
+    to-from : to ∘ from ≡ id
+    to-from =
+      to ∘ from ≡⟨ refl ⟩
+      M→M′ .map ≡⟨ cong map eq ⟩
+      M→M .map ≡⟨ refl ⟩
+      id ∎
+
+    FOO : Iso M (FreeMonoid A)
+    FOO = iso from to from-to (ap to-from)
+  -- -- -- FreeMonoid≃List : FreeMonoid A ≃ List A
+  -- -- -- FreeMonoid≃List = isoToEquiv
+  -- -- --   (iso to from to-from from-to)
+
+
+    -- to-from : ∀ (x : M) → to (from x) ≡ x
+    -- to-from = freemonoid-elim _ to-from-inj to-from-unit to-from-op
+    --   where
+    --     injᴹ = FM .inj
+    --     injᶠ = FFF .inj
+
+    --     P : M → Type
+    --     P x = to (from x) ≡ x
+
+    --     lem : to ∘ from ∘ injᴹ ≡ injᴹ
+    --     lem =
+    --       to ∘ from ∘ injᴹ ≡⟨ cong (to ∘_) (freeᴹ .snd .fst) ⟩
+    --       to ∘ injᶠ ≡⟨ freeᶠ .snd .fst ⟩
+    --       injᴹ ∎
+
+    --     to-from-inj : ∀ x → P (injᴹ x)
+    --     to-from-inj = ap lem
+
+    --     to-from-unit : P e
+    --     to-from-unit =
+    --       to (from e) ≡⟨ cong to (M→F .map-unit) ⟩
+    --       to e ≡⟨ F→M .map-unit ⟩
+    --       e ∎
+
+    --     to-from-op : ∀ x y → P x → P y → P (x ⋄ y)
+    --     to-from-op x y p q =
+    --       to (from (x ⋄ y)) ≡⟨ cong to (M→F .map-op x y) ⟩
+    --       to (from x ⋄ from y) ≡⟨ F→M .map-op (from x) (from y) ⟩
+    --       to (from x) ⋄ to (from y) ≡⟨ cong₂ _⋄_ p q ⟩
+    --       x ⋄ y ∎
+
+
+  -- freeᴹ = FM .free (FN .inj)
+  -- freeᴺ = FN .free (FM .inj)
+
+
+  -- from : M → N
+  -- from = freeᴹ .fst .map
+
+  -- to : N → M
+  -- to = freeᴺ .fst .map
     
 
-  to-from : ∀ x → to (from x) ≡ x
-  to-from = {!!}
-    where
-    P : M → Type
-    P x = to (from x) ≡ x
-
-    to-from-unit : P e
-    to-from-unit = cong to (freeᴹ .fst .map-unit)  ∙ freeᴺ .fst .map-unit
-
-    to-from-op : ∀ x y → P x → P y → P (x ⋄ y)
-    to-from-op x y p q =
-      to (from (x ⋄ y)) ≡⟨ cong to (freeᴹ .fst .map-op x y) ⟩
-      to (from x ⋄ from y) ≡⟨ freeᴺ .fst .map-op (from x) (from y) ⟩
-      to (from x) ⋄ to (from y) ≡⟨ cong₂ _⋄_ p q ⟩
-      x ⋄ y ∎
-
   -- to-from : ∀ x → to (from x) ≡ x
-  -- to-from [] = refl
-  -- to-from (x ∷ xs) = cong (x ∷_) (to-from xs)
+  -- to-from = {!!}
+  --   where
+  --   P : M → Type
+  --   P x = to (from x) ≡ x
 
-  -- from-to : ∀ x → from (to x) ≡ x
-  -- from-to = elimIntoProp _ (λ _ → squash _ _)
-  --   (unit-r ∘ freeFree .inj)
-  --   (cong from (freeᶠ .fst .map-unit) ∙ freeˡ .fst .map-unit)
-  --   (λ x y p q →
-  --     from (to (x ⋄ y)) ≡⟨ cong from (freeᶠ .fst .map-op x y) ⟩
-  --     from (to x ⋄ to y) ≡⟨ freeˡ .fst .map-op (to x) (to y) ⟩
-  --     from (to x) ⋄ from (to y) ≡⟨ cong₂ _⋄_ p q ⟩
-  --     x ⋄ y ∎)
+  --   to-from-unit : P e
+  --   to-from-unit = cong to (freeᴹ .fst .map-unit)  ∙ freeᴺ .fst .map-unit
 
-  -- -- FreeMonoid≃List : FreeMonoid A ≃ List A
-  -- -- FreeMonoid≃List = isoToEquiv
-  -- --   (iso to from to-from from-to)
+  --   to-from-op : ∀ x y → P x → P y → P (x ⋄ y)
+  --   to-from-op x y p q =
+  --     to (from (x ⋄ y)) ≡⟨ cong to (freeᴹ .fst .map-op x y) ⟩
+  --     to (from x ⋄ from y) ≡⟨ freeᴺ .fst .map-op (from x) (from y) ⟩
+  --     to (from x) ⋄ to (from y) ≡⟨ cong₂ _⋄_ p q ⟩
+  --     x ⋄ y ∎
+
+  -- -- to-from : ∀ x → to (from x) ≡ x
+  -- -- to-from [] = refl
+  -- -- to-from (x ∷ xs) = cong (x ∷_) (to-from xs)
+
+  -- -- from-to : ∀ x → from (to x) ≡ x
+  -- -- from-to = elimIntoProp _ (λ _ → squash _ _)
+  -- --   (unit-r ∘ freeFree .inj)
+  -- --   (cong from (freeᶠ .fst .map-unit) ∙ freeˡ .fst .map-unit)
+  -- --   (λ x y p q →
+  -- --     from (to (x ⋄ y)) ≡⟨ cong from (freeᶠ .fst .map-op x y) ⟩
+  -- --     from (to x ⋄ to y) ≡⟨ freeˡ .fst .map-op (to x) (to y) ⟩
+  -- --     from (to x) ⋄ from (to y) ≡⟨ cong₂ _⋄_ p q ⟩
+  -- --     x ⋄ y ∎)
+
+  -- -- -- FreeMonoid≃List : FreeMonoid A ≃ List A
+  -- -- -- FreeMonoid≃List = isoToEquiv
+  -- -- --   (iso to from to-from from-to)
 ```
