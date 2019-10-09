@@ -392,6 +392,77 @@ univalence into a type equality:
   FreeMonoid≃List = isoToEquiv
     (iso toList fromList toList-fromList fromList-toList)
 
-  FreeMonoid≡List : FreeMonoid A ≡ List A
-  FreeMonoid≡List = ua FreeMonoid≃List
+  -- FreeMonoid≡List : FreeMonoid A ≡ List A
+  -- FreeMonoid≡List = ua FreeMonoid≃List
+```
+
+## `List` vs `FreeMonoid` (cont.)
+
+This gives us an alternative way to prove that `List A` is a monoid / free monoid:
+
+```
+  -- foo : ∀ {A : Type₁} {x y : A} (F : A → Type) (p : x ≡ y) (Fx : F x) → PathP (λ i → F (p i)) Fx (subst F p Fx)
+  -- foo {x = x} {y = y} F p Fx = {!!}
+  -- --
+  -- -- Fx                   subst F p Fx
+  -- --  .                   .
+
+  -- M : Monoid (List A)
+  -- M = subst Monoid FreeMonoid≡List (freeMonoid A)
+
+  -- p : PathP (λ i → Monoid (FreeMonoid≡List i)) (freeMonoid A) M
+  -- p = foo Monoid FreeMonoid≡List (freeMonoid A)
+
+  -- FM : IsFreeMonoidOver A M
+  -- FM = transp (λ i → IsFreeMonoidOver A (p i)) i0 (freeMonoidIsFree AIsSet)
+```
+
+```
+module ListVsFreeMonoid2 (AIsSet : isSet A) where
+  open IsFreeMonoidOver
+  open Hom
+
+  listFree = listIsFree AIsSet
+  freeFree = freeMonoidIsFree AIsSet
+
+  freeᶠ = freeFree .free (listMonoid AIsSet) (listFree .inj)
+  freeˡ = listFree .free (freeMonoid A) (freeFree .inj)
+
+  listIsSet : isSet (List A)
+  listIsSet = isOfHLevelList 0 AIsSet
+
+  fromList : List A → FreeMonoid A
+  fromList = freeˡ .fst .map
+
+  toList : FreeMonoid A → List A
+  toList = freeᶠ .fst .map
+
+  -- toList-fromList : ∀ xs → toList (fromList xs) ≡ xs
+  -- toList-fromList [] = refl
+  -- toList-fromList (x ∷ xs) = cong (x ∷_) (toList-fromList xs)
+
+  toList-fromList : ∀ x → freeᶠ .fst .map (freeˡ .fst .map x) ≡ x
+  -- toList-fromList [] = refl
+  -- toList-fromList (x ∷ xs) = cong (x ∷_) (toList-fromList xs)
+
+  toList-fromList x = ?
+
+  -- fromList-toList : ∀ x → fromList (toList x) ≡ x
+  -- fromList-toList = elimIntoProp _ (λ _ → squash _ _)
+  --     (unit-r ∘ _)
+  --     refl
+  --     (λ x y p q → fromList-homo (toList x) (toList y) ∙ cong₂ _:⋄:_ p q)
+  --   where
+  --     fromList-homo : ∀ xs ys → fromList (xs ++ ys) ≡ fromList xs :⋄: fromList ys
+  --     fromList-homo = listFree .free (freeMonoid A) (freeFree. inj) .fst .map-op
+
+  fromList-toList : ∀ x → freeˡ .fst .map (freeᶠ .fst .map x) ≡ x
+  fromList-toList = elimIntoProp _ (λ _ → squash _ _)
+    (λ x → unit-r (freeFree .inj x))
+    (cong (freeˡ .fst .map) (freeᶠ .fst .map-unit) ∙ freeˡ .fst .map-unit)
+    (λ x y p q → cong (freeˡ .fst .map) (freeᶠ .fst .map-op x y) ∙ freeˡ .fst .map-op (freeᶠ .fst .map x) (freeᶠ .fst .map y) ∙ cong₂ _:⋄:_ p q)
+
+  FreeMonoid≃List : FreeMonoid A ≃ List A
+  FreeMonoid≃List = isoToEquiv
+    (iso toList fromList toList-fromList fromList-toList)
 ```
