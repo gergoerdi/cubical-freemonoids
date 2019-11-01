@@ -3,7 +3,7 @@ title: Free monoids take a price HIT
 author: |
    | Gergő Érdi
    | \url{http://unsafePerform.IO/}
-date: Haskell.SG, December 2019.
+date: Haskell.SG, January 2020.
 colortheme: crane
 ---
 
@@ -461,6 +461,12 @@ This gives us an alternative way to prove that `List A` is a monoid / free monoi
 **All** free monoids over the same base set are isomorphic (and thus
 by univalence, equal) so it makes sense to talk about **the** free
 monoid.
+
+\pause
+
+\begin{overlayarea}{\textwidth}{0pt}
+\only<2>{\includegraphics[width=0.9\textwidth]{./universal.jpg}}
+\end{overlayarea}
 
 \pause
 
