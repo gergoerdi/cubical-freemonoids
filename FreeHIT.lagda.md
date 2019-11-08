@@ -363,14 +363,14 @@ freeMonoidIsFree {A = A} AIsSet = record
 ```
 -->
 
-## `List` vs `FreeMonoid`
+## `List` vs `HITMon`
 
 The two are isomorphic.
 
-From `List` to `FreeMonoid` we can just go right-associated:
+From `List` to `HITMon` we can just go right-associated:
 
 ```agda
-module ListVsFreeMonoid (AIsSet : isSet A) where
+module ListVsHITMon (AIsSet : isSet A) where
   listIsSet : isSet (List A)
   listIsSet = isOfHLevelList 0 AIsSet
 
@@ -379,7 +379,7 @@ module ListVsFreeMonoid (AIsSet : isSet A) where
   fromList (x ∷ xs) = ⟨ x ⟩ :⋄: fromList xs
 ```
 
-## `List` vs `FreeMonoid` (cont.)
+## `List` vs `HITMon` (cont.)
 
 For the other direction, we map fiat equalities to list equality
 proofs:
@@ -401,7 +401,7 @@ proofs:
     i j
 ```
 
-## `List` vs `FreeMonoid` (cont.)
+## `List` vs `HITMon` (cont.)
 
 These two functions form an isomorphism, which we can lift using
 univalence into a type equality:
@@ -437,7 +437,7 @@ univalence into a type equality:
 ```
 
 <!--
-## `List` vs `FreeMonoid` (cont.)
+## `List` vs `HITMon` (cont.)
 
 This gives us an alternative way to prove that `List A` is a monoid / free monoid:
 
@@ -474,7 +474,7 @@ Sketch of the proof:
 
 * Suppose we have `M` and `N` free monoids over some `A`, and take the
   homomorphisms `φ : Hom N M` (since `N` is free) and `ψ : Hom M N`,
-  with `φ ∘ injᴹ ≡ injᴺ` and `ψ ∘ injᴺ ≡ injᴹ`.
+  with `φ ∘ injᴺ ≡ injᴹ` and `ψ ∘ injᴹ ≡ injᴺ`.
 
 * `φ ∘ ψ : Hom M M`, and it has `φ ∘ ψ ∘ injᴹ ≡ injᴹ`
 
