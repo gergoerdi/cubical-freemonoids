@@ -473,15 +473,16 @@ monoid.
 Sketch of the proof:
 
 * Suppose we have `M` and `N` free monoids over some `A`, and take the
-  homomorphisms `φ : Hom N M` (since `N` is free) and `ψ : Hom M N`,
-  with `φ ∘ injᴺ ≡ injᴹ` and `ψ ∘ injᴹ ≡ injᴺ`.
+  homomorphisms `φ : Hom N M` (since `N` is free) and `ψ : Hom M N`
+  with `φ ∘ injᴺ ≡ injᴹ` and `ψ ∘ injᴹ ≡ injᴺ`
 
-* `φ ∘ ψ : Hom M M`, and it has `φ ∘ ψ ∘ injᴹ ≡ injᴹ`
+* We have `φ ∘ ψ : Hom M M`, with `φ ∘ ψ ∘ injᴹ ≡ injᴹ`
 
-* But that means `φ ∘ ψ ≡ id : Hom M M` since that one also satisfies this
-  property. Likewise for `ψ ∘ φ`.
+* Now since `M` is free, take `ι : Hom M M` with `ι ∘ injᴹ ≡ injᴹ` uniquely.
+  This gives `φ ∘ ψ ≡ ι ≡ id` since they all
+  satisfy this property. Likewise for `ψ ∘ φ`.
 
-* So `φ` and `ψ` form an isomorphism between `M` and `N` $\qed$
+* So `φ` and `ψ` form an isomorphism between `M` and `N`. $\qed$
 
 <!--
 ```
@@ -499,14 +500,14 @@ module UniqueFreeMonoid {M N} {{MM : Monoid M}} {{NN : Monoid N}}
       injᴹ = FM .inj
       injᴺ = FN .inj
 
-      freeᴹ = FM .free injᴺ
-      freeᴺ = FN .free injᴹ
+      freeᴹᴺ = FM .free injᴺ
+      freeᴺᴹ = FN .free injᴹ
 
-      φ : Hom NN MM
-      φ = freeᴺ .fst
+      φ = freeᴺᴹ .fst
+      φ-prop = freeᴺᴹ .snd .fst
 
-      ψ : Hom MM NN
-      ψ = freeᴹ .fst
+      ψ = freeᴹᴺ .fst
+      ψ-prop = freeᴹᴺ .snd .fst
 
       to : M → N
       to = ψ .map
@@ -523,20 +524,20 @@ module UniqueFreeMonoid {M N} {{MM : Monoid M}} {{NN : Monoid N}}
       φψ-lemma : φψ .map ∘ injᴹ ≡ injᴹ
       φψ-lemma =
         φψ .map ∘ injᴹ ≡⟨⟩
-        from ∘ to ∘ injᴹ ≡⟨ cong (from ∘_) (freeᴹ .snd .fst) ⟩
-        from ∘ injᴺ ≡⟨ freeᴺ .snd .fst ⟩
+        from ∘ to ∘ injᴹ ≡⟨ cong (from ∘_) ψ-prop ⟩
+        from ∘ injᴺ ≡⟨ φ-prop ⟩
         injᴹ ∎
 
-      uniqueness : φψ ≡ idᴹ
-      uniqueness =
-        FM .free {M} injᴹ .snd .snd φψ φψ-lemma ∙
-        sym (FM .free {M} injᴹ .snd .snd idᴹ refl)
+      freeᴹᴹ = FM .free injᴹ
+      ι = freeᴹᴹ .fst
+      ι-unique = freeᴹᴹ .snd .snd
 
     roundtrip : from ∘ to ≡ id
     roundtrip =
-      from ∘ to ≡⟨⟩
-      φψ .map ≡⟨ cong map uniqueness ⟩
-      idᴹ .map ≡⟨⟩
+      from ∘ to  ≡⟨⟩
+      φψ .map    ≡⟨ cong map      (ι-unique φψ φψ-lemma) ⟩
+      ι .map     ≡⟨ cong map (sym (ι-unique idᴹ refl))   ⟩
+      idᴹ .map   ≡⟨⟩
       id ∎
 
   to : M → N
