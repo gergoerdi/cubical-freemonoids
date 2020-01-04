@@ -22,17 +22,17 @@ Type : Set _
 Type = Type₀
 
 variable
-  ℓ ℓ′ : Level
+  ℓ : Level
   A B C T : Type
 
 infixr 2 _≡⟨⟩_
 _≡⟨⟩_ : (x : A) {y : A} → x ≡ y → x ≡ y
 x ≡⟨⟩ p = x ≡⟨ refl ⟩ p
 
-ap : ∀ {A : Type′ ℓ} {B : A → Type′ ℓ′} {f g : (x : A) → B x} (p : f ≡ g) → (x : A) → f x ≡ g x
+ap : ∀ {B : A → Type} {f g : (x : A) → B x} (p : f ≡ g) → (x : A) → f x ≡ g x
 ap p x = cong (λ f → f x) p
 
-id : ∀ {A : Type′ ℓ} → A → A
+id : A → A
 id x = x
 ```
 -->
@@ -110,7 +110,7 @@ Hom-comp φ ψ = record
 ## Free monoids
 
 ```agda
-Unique : (A : Type′ ℓ) (P : A → Type′ ℓ′) → Set _
+Unique : (A : Type′ ℓ) (P : A → Type) → Type′ _
 Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ]
   ∀ (y : A) → P y → y ≡ x
 ```
@@ -119,7 +119,7 @@ Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ]
 ```agda
 open import Cubical.Data.Sigma using (ΣPathP)
 
-Unique→IsContr : ∀ (A : Type′ ℓ) (P : A → Type′ ℓ′) → (∀ x → isProp (P x)) → Unique A P → isContr (Σ A P)
+Unique→IsContr : ∀ (A : Type) (P : A → Type) → (∀ x → isProp (P x)) → Unique A P → isContr (Σ A P)
 Unique→IsContr A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sym (ΣPathP (unique y Py , r Py Px (unique y Py))) }
   where
     r : isOfHLevelDep 1 P
@@ -128,7 +128,7 @@ Unique→IsContr A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sy
 -->
 
 ```agda
-record IsFreeMonoidOver (A : Type) {T : Type} (M₀ : Monoid T) : Type₁ where
+record IsFreeMonoidOver (A : Type) (M₀ : Monoid T) : Type₁ where
   open Hom
   field
     inj : A → T
