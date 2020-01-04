@@ -65,6 +65,8 @@ data MonoidSyntax A : Type where
 
 ### Is `MonoidSyntax` a monoid?
 
+\pause
+
 Regardless of the carrier type `A`, this is **not a lawful monoid**;
 for example:
 
@@ -73,6 +75,10 @@ for example:
 
 \pause
 There is too fine a structure!
+
+## Is `MonoidSyntax` a monoid?
+
+\input{MonoidSyntax.pgf}
 
 ## Monoid homomorphisms
 
@@ -114,7 +120,6 @@ Unique : (A : Type′ ℓ) (P : A → Type) → Type′ _
 Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ]
   ∀ (y : A) → P y → y ≡ x
 ```
-
 <!--
 ```agda
 open import Cubical.Data.Sigma using (ΣPathP)

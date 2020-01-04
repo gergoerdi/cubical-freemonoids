@@ -1,0 +1,14 @@
+resolver: lts-14.19
+packages: []
+extra-deps:
+    - cairo-0.13.8.0
+    - pango-0.13.8.0
+    - glib-0.13.8.0
+    - gtk2hs-buildtools-0.13.8.0
+    - diagrams-cairo-1.4.1
+    - diagrams-lib-1.4.3
+    - diagrams-pgf-1.4.1.1
+    - diagrams-contrib-1.4.4
+    - texrunner-0.0.1.2
+    
+    
