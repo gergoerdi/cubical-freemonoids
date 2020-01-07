@@ -83,7 +83,7 @@ There is too fine a structure!
 ## Monoid homomorphisms
 
 ```agda
-record Hom (M : Monoid A) (N : Monoid B) : Type₁ where
+record Hom (M : Monoid A) (N : Monoid B) : Type where
   open Monoid M renaming (_⋄_ to _⋄₁_; ε to ε₁)
   open Monoid N renaming (_⋄_ to _⋄₂_; ε to ε₂)
   field
