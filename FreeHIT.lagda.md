@@ -15,14 +15,13 @@ colortheme: crane
 ```agda
 {-# OPTIONS --cubical --postfix-projections #-}
 
-open import Cubical.Core.Everything renaming (Type to Type′)
+open import Cubical.Core.Everything hiding (Type)
 open import Cubical.Foundations.Everything hiding (Type; assoc)
 
 Type : Set _
 Type = Type₀
 
 variable
-  ℓ : Level
   A B C T : Type
 
 infixr 2 _≡⟨⟩_
@@ -34,6 +33,9 @@ ap p x = cong (λ f → f x) p
 
 id : A → A
 id x = x
+
+_×_ : Type → Type → Type
+A × B = Σ A λ _ → B
 ```
 -->
 
@@ -83,42 +85,47 @@ There is too fine a structure!
 ## Monoid homomorphisms
 
 ```agda
-record Hom (M : Monoid A) (N : Monoid B) : Type where
+record isHom (M : Monoid A) (N : Monoid B) (φ : A → B) : Type where
   open Monoid M renaming (_⋄_ to _⋄₁_; ε to ε₁)
   open Monoid N renaming (_⋄_ to _⋄₂_; ε to ε₂)
   field
-    map      : A → B
-    map-unit : map ε₁ ≡ ε₂
-    map-op   : ∀ x y → map (x ⋄₁ y) ≡ map x ⋄₂ map y
+    map-unit : φ ε₁ ≡ ε₂
+    map-op   : ∀ x y → φ (x ⋄₁ y) ≡ φ x ⋄₂ φ y
+
+Extends : (A → B) → (A → T) → (T → B) → Type
+Extends f inj φ = φ ∘ inj ≡ f
+
+Hom-Extends : (M₀ : Monoid T) (M : Monoid B) →
+  (A → B) → (A → T) → (T → B) → Type
+Hom-Extends M₀ M f inj φ = isHom M₀ M φ × Extends f inj φ
 ```
 
 <!--
 ```agda
-Hom-id : ∀ (M : Monoid A) → Hom M M
-Hom-id M = record
-  { map = id
-  ; map-unit = refl
+hom-id : ∀ {{M : Monoid A}} → isHom M M id
+hom-id {{M}} = record
+  { map-unit = refl
   ; map-op = λ x y → refl
   }
 
-Hom-comp : ∀ {L : Monoid A} {M : Monoid B} {N : Monoid C} →
-  Hom M N → Hom L M → Hom L N
-Hom-comp φ ψ = record
-  { map = φ .map ∘ ψ .map
-  ; map-unit = cong (φ .map) (ψ .map-unit) ∙ φ .map-unit
-  ; map-op = λ x y → cong (φ .map) (ψ .map-op x y) ∙ φ .map-op (ψ .map x) (ψ .map y)
+hom-comp : ∀ {{L : Monoid A}} {{M : Monoid B}} {{N : Monoid C}} →
+  (φ : B → C) → (ψ : A → B) → {{isHom M N φ}} → {{isHom L M ψ}} → isHom L N (φ ∘ ψ)
+hom-comp φ ψ {{hom-φ}} {{hom-ψ}} = record
+  { map-unit = cong φ (hom-ψ .map-unit) ∙ hom-φ .map-unit
+  ; map-op = λ x y → cong φ (hom-ψ .map-op x y) ∙ hom-φ .map-op (ψ x) (ψ y)
   }
   where
-  open Hom
+    open isHom
 ```
 -->
 
 ## Free monoids
 
 ```agda
-Unique : (A : Type′ ℓ) (P : A → Type) → Type′ _
+Unique : (A : Type) (P : A → Type) → Type
 Unique A P = Σ[ x ∈ A ] Σ[ _ ∈ P x ]
   ∀ (y : A) → P y → y ≡ x
+
 ```
 <!--
 ```agda
@@ -134,11 +141,10 @@ Unique→IsContr A P PIsProp (x , Px , unique) = (x , Px) , λ { (y , Py) → sy
 
 ```agda
 record IsFreeMonoidOver (A : Type) (M₀ : Monoid T) : Type₁ where
-  open Hom
   field
     inj : A → T
     free : {{M : Monoid B}} (f : A → B) →
-      Unique (Hom M₀ M) (λ φ → φ .map ∘ inj ≡ f)
+      Unique (T → B) (Hom-Extends M₀ M f inj)
 
 IsFreeMonoid :
   {F : Type → Type} (FM : ∀ {A} → isSet A → Monoid (F A)) →
@@ -146,23 +152,6 @@ IsFreeMonoid :
 IsFreeMonoid {F} FM = ∀ {A} (AIsSet : isSet A) →
   IsFreeMonoidOver A (FM AIsSet)
 ```
-
-<!--
-```agda
-module _ {{M : Monoid A}} {{N : Monoid B}} (φ ψ : Hom M N) where
-  open Hom
-
-  Hom≡ : φ .map ≡ ψ .map → φ ≡ ψ
-  Hom≡ p i = record
-    { map = p i
-    ; map-unit = isSet→isSet' set map-unit₁ map-unit₂ (ap p ε) (λ _ → ε) i
-    ; map-op = λ x y → isSet→isSet' set (map-op₁ x y) (map-op₂ x y) (ap p (x ⋄ y)) (cong₂ _⋄_ (ap p x) (ap p y)) i
-    }
-    where
-    open Hom φ renaming (map to map₁; map-unit to map-unit₁; map-op to map-op₁)
-    open Hom ψ renaming (map to map₂; map-unit to map-unit₂; map-op to map-op₂)
-```
--->
 
 ## `List A` is a free monoid
 
@@ -200,24 +189,26 @@ listIsFree {A = A} AIsSet = record
   ; free = free
   }
   where
-  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (Hom (listMonoid AIsSet) M) _
-  free {B = B} {{M}} f = hom , funExt (λ x → unit-r (f x)) , λ φ p → Hom≡ φ hom (funExt (pointwise φ p))
+  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (List A → B) _
+  free {B = B} {{M}} f = map , (hom , funExt (λ x → unit-r (f x))) , λ { φ (hom-φ , p) → funExt (pointwise φ hom-φ p) }
     where
     instance _ = listMonoid AIsSet
 
-    hom : Hom (listMonoid AIsSet) M
-    hom = record { map = foldr (λ x → f x ⋄_) ε ; map-unit = refl ; map-op = map-op }
+    map : List A → B
+    map = foldr (λ x → f x ⋄_) ε
+
+    hom : isHom (listMonoid AIsSet) M map
+    hom = record { map-unit = refl; map-op = map-op }
       where
-      map-op : (xs ys : List A) →
-        foldr (λ x → f x ⋄_) ε (xs ++ ys) ≡ (foldr (λ x → f x ⋄_) ε xs) ⋄ (foldr (λ x → f x ⋄_) ε ys)
-      map-op [] ys = sym (unit-l _)
-      map-op (x ∷ xs) ys = cong (f x ⋄_) (map-op xs ys) ∙ sym (assoc (f x) _ _)
+        map-op : (xs ys : List A) →
+          map (xs ++ ys) ≡ map xs ⋄ map ys
+        map-op [] ys = sym (unit-l _)
+        map-op (x ∷ xs) ys = cong (f x ⋄_) (map-op xs ys) ∙ sym (assoc (f x) _ _)
 
-    module _ φ (p : Hom.map φ ∘ [_] ≡ f)  where
-      open Hom hom
-      open Hom φ renaming (map to map′; map-unit to map-unit′; map-op to map-op′)
+    module _ φ (hom-φ : isHom (listMonoid AIsSet) M φ) (p : φ ∘ [_] ≡ f)  where
+      open isHom hom-φ renaming (map-unit to map-unit′; map-op to map-op′)
 
-      pointwise : ∀ xs → map′ xs ≡ map xs
+      pointwise : ∀ xs → φ xs ≡ map xs
       pointwise [] = map-unit′
       pointwise (x ∷ xs) = map-op′ [ x ] xs ∙ cong₂ _⋄_ (λ i → p i x) (pointwise xs)
 ```
@@ -336,32 +327,30 @@ freeMonoidIsFree {A = A} AIsSet = record
   ; free = free
   }
   where
-  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (Hom (freeMonoid A) M) _
-  free {B = B} {{M}} f = hom , funExt (λ x → refl) , λ φ p → Hom≡ φ hom (funExt (pointwise φ p))
+  free : ∀ {B} {{M : Monoid B}} (f : A → B) → Unique (HITMon A → B) _
+  free {B = B} {{M}} f = map , (hom , refl) , λ { φ (hom-φ , p) → funExt (pointwise φ hom-φ p) }
     where
     instance _ = freeMonoid A
 
-    hom : Hom (freeMonoid A) M
+    map : HITMon A → B
+    map ⟨ x ⟩ = f x
+    map :ε: = ε
+    map (x :⋄: y) = map x ⋄ map y
+    map (:unit-l: x i) = unit-l (map x) i
+    map (:unit-r: x i) = unit-r (map x) i
+    map (:assoc: x y z i) = assoc (map x) (map y) (map z) i
+    map (trunc x y p q i j) = set (map x) (map y) (cong map p) (cong map q) i j
+
+    hom : isHom (freeMonoid A) M map
     hom = record
-      { map = map
-      ; map-unit = refl
+      { map-unit = refl
       ; map-op = λ x y → refl
       }
-      where
-        map : HITMon A → B
-        map ⟨ x ⟩ = f x
-        map :ε: = ε
-        map (x :⋄: y) = map x ⋄ map y
-        map (:unit-l: x i) = unit-l (map x) i
-        map (:unit-r: x i) = unit-r (map x) i
-        map (:assoc: x y z i) = assoc (map x) (map y) (map z) i
-        map (trunc x y p q i j) = set (map x) (map y) (cong map p) (cong map q) i j
 
-    module _ φ (p : Hom.map φ ∘ ⟨_⟩ ≡ f)  where
-      open Hom hom
-      open Hom φ renaming (map to map′; map-unit to map-unit′; map-op to map-op′)
+    module _ φ (hom-φ : isHom (freeMonoid A) M φ) (p : φ ∘ ⟨_⟩ ≡ f)  where
+      open isHom hom-φ renaming (map-unit to map-unit′; map-op to map-op′)
 
-      pointwise : ∀ x → map′ x ≡ map x
+      pointwise : ∀ x → φ x ≡ map x
       pointwise = elimIntoProp _ (λ x → set _ _) (ap p)
         map-unit′
         λ x y p q → map-op′ x y ∙ cong₂ _⋄_ p q
@@ -496,7 +485,6 @@ module UniqueFreeMonoid {M N} {{MM : Monoid M}} {{NN : Monoid N}}
   (FM : IsFreeMonoidOver A MM)
   (FN : IsFreeMonoidOver A NN)
   where
-  open Hom
   open IsFreeMonoidOver
 
   module _ {M N} {{MM : Monoid M}} {{NN : Monoid N}}
@@ -509,47 +497,36 @@ module UniqueFreeMonoid {M N} {{MM : Monoid M}} {{NN : Monoid N}}
       freeᴺᴹ = FN .free injᴹ
 
       φ = freeᴺᴹ .fst
-      φ-prop = freeᴺᴹ .snd .fst
-
       ψ = freeᴹᴺ .fst
-      ψ-prop = freeᴹᴺ .snd .fst
 
-      to : M → N
-      to = ψ .map
+      instance
+        _ = freeᴺᴹ .snd .fst .fst
+        _ = freeᴹᴺ .snd .fst .fst
 
-      from : N → M
-      from = φ .map
+      φ-prop = freeᴺᴹ .snd .fst .snd
+      ψ-prop = freeᴹᴺ .snd .fst .snd
 
-      idᴹ : Hom MM MM
-      idᴹ = Hom-id MM
-
-      φψ : Hom MM MM
-      φψ = Hom-comp φ ψ
-
-      φψ-lemma : φψ .map ∘ injᴹ ≡ injᴹ
-      φψ-lemma =
-        φψ .map ∘ injᴹ ≡⟨⟩
-        from ∘ to ∘ injᴹ ≡⟨ cong (from ∘_) ψ-prop ⟩
-        from ∘ injᴺ ≡⟨ φ-prop ⟩
+      φ∘ψ-lemma : φ ∘ ψ ∘ injᴹ ≡ injᴹ
+      φ∘ψ-lemma =
+        φ ∘ ψ ∘ injᴹ ≡⟨ cong (φ ∘_) ψ-prop ⟩
+        φ ∘ injᴺ ≡⟨ φ-prop ⟩
         injᴹ ∎
 
       freeᴹᴹ = FM .free injᴹ
       ι = freeᴹᴹ .fst
       ι-unique = freeᴹᴹ .snd .snd
 
-    roundtrip : from ∘ to ≡ id
+    roundtrip : φ ∘ ψ ≡ id
     roundtrip =
-      from ∘ to  ≡⟨⟩
-      φψ .map    ≡⟨ cong map      (ι-unique φψ φψ-lemma) ⟩
-      ι .map     ≡⟨ cong map (sym (ι-unique idᴹ refl))   ⟩
-      idᴹ .map   ≡⟨⟩
+      φ ∘ ψ  ≡⟨ ι-unique (φ ∘ ψ) (hom-comp φ ψ , φ∘ψ-lemma)  ⟩
+      ι      ≡⟨ sym (ι-unique id (hom-id , refl))   ⟩
       id ∎
 
   to : M → N
-  to = FM .free (FN .inj) .fst .map
+  to = FM .free (FN .inj) .fst
 
   from : N → M
-  from = FN .free (FM .inj) .fst .map
+  from = FN .free (FM .inj) .fst
 
   from-to : ∀ x → from (to x) ≡ x
   from-to = ap (roundtrip FM FN)
