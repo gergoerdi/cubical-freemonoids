@@ -522,19 +522,20 @@ module UniqueFreeMonoid {M N} {{MM : Monoid M}} {{NN : Monoid N}}
       ι      ≡⟨ sym (ι-unique id (hom-id , refl))   ⟩
       id ∎
 
-  to : M → N
-  to = FM .free (FN .inj) .fst
+  private
+    to : M → N
+    to = FM .free (FN .inj) .fst
 
-  from : N → M
-  from = FN .free (FM .inj) .fst
+    from : N → M
+    from = FN .free (FM .inj) .fst
 
-  from-to : ∀ x → from (to x) ≡ x
-  from-to = ap (roundtrip FM FN)
+    from-to : ∀ x → from (to x) ≡ x
+    from-to = ap (roundtrip FM FN)
 
-  to-from : ∀ x → to (from x) ≡ x
-  to-from = ap (roundtrip FN FM)
+    to-from : ∀ x → to (from x) ≡ x
+    to-from = ap (roundtrip FN FM)
 
-  M≃N : M ≃ N
-  M≃N = isoToEquiv (iso to from to-from from-to)
+  unique : M ≡ N
+  unique = ua (isoToEquiv (iso to from to-from from-to))
 ```
 -->
